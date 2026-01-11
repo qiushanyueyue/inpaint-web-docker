@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.DS_Store
+.git
+.gitignore
+.env
+.vscode
+*.log
+dist
+.husky
+media
+README.md
+LICENSE
+.prettierignore
+.prettierrc
+.eslintrc.json
+tsconfig.json

@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  inpaint-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inpaint-web
+    ports:
+      - "3332:3332"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "com.inpaint-web.description=Inpaint Web - 离线图像修复和超分辨率工具"

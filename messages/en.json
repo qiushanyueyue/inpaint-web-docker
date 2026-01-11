@@ -1,0 +1,14 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"drop_zone": "Click or drag here",
+	"try_it_images": "Try it:",
+	"feedback": "About me",
+	"start_new": "Start new",
+	"bruch_size": "Brush Size",
+	"original": "Original",
+	"upscale": "4x-upscaling",
+	"download": "Download",
+	"undo": "Undo",
+	"inpaint_model_download_message": "Loading model file (about 30MB), please wait patiently for first time use...",
+	"upscaleing_model_download_message": "Loading super-resolution model (about 70MB), please wait patiently for first time use..."
+}

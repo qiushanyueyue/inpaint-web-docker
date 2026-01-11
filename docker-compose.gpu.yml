@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  # 前端服务
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: inpaint-web-frontend
+    ports:
+      - "3332:3332"
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://localhost:8888
+    depends_on:
+      - backend
+    networks:
+      - inpaint-network
+
+  # 后端 GPU 服务
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.gpu
+    container_name: inpaint-web-backend-gpu
+    ports:
+      - "8888:8888"
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    networks:
+      - inpaint-network
+
+networks:
+  inpaint-network:
+    driver: bridge

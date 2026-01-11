@@ -1,0 +1,14 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"drop_zone": "点击 或者 拖拽到这里",
+	"try_it_images": "试一试:",
+	"feedback": "联系作者",
+	"start_new": "开始新的",
+	"bruch_size": "刷子大小",
+	"original": "原图",
+	"upscale": "4 倍放大",
+	"download": "下载",
+	"undo": "撤销",
+	"inpaint_model_download_message": "正在加载模型文件（约30MB），首次使用请耐心等待...",
+	"upscaleing_model_download_message": "正在加载超分辨率模型（约70MB），首次使用请耐心等待..."
+}
