@@ -5,10 +5,10 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        # 设置为 browser 模式，使用浏览器端 ONNX 模型
-        # 避免后端服务依赖问题
-        VITE_UPSCALE_MODE: browser
-        VITE_API_URL: http://localhost:8888
+        # 设置为 server 模式，使用后端 GPU 加速
+        VITE_UPSCALE_MODE: server
+        # 使用 NAS 局域网 IP（用户通过浏览器访问后端 API）
+        VITE_API_URL: http://10.254.113.54:8888
     container_name: inpaint-web-frontend
     ports:
       - "3332:3332"
