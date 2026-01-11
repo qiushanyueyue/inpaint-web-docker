@@ -38,6 +38,8 @@ logs/
 # Models (too large for Git, download via script)
 backend/models/*.pth
 backend/models/*.onnx
+backend/weights/
+
 !backend/models/.gitkeep
 
 # Artifacts (documentation only)
