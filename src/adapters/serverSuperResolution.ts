@@ -35,12 +35,18 @@ export async function serverSuperResolution(
   imageFile: File | HTMLImageElement,
   callback: (progress: number) => void
 ): Promise<string> {
-  // 将 HTMLImageElement 转换为 File
+  // 并不是所有 File 都能被 PIL 直接识别，为了稳妥起见，
+  // 我们统一将所有图片（无论是 File 还是 HTMLImageElement）
+  // 都先绘制到 Canvas 上再转为标准 PNG File
   let file: File
+
   if (imageFile instanceof HTMLImageElement) {
     file = await htmlImageToFile(imageFile)
   } else {
-    file = imageFile
+    // 如果是 File，先转为 Image 元素加载，再转回 PNG File
+    // 这样可以确保格式统一为 PNG，解决兼容性问题
+    const img = await fileToImage(imageFile)
+    file = await htmlImageToFile(img)
   }
 
   // 创建 FormData
@@ -116,5 +122,17 @@ async function htmlImageToFile(image: HTMLImageElement): Promise<File> {
       const file = new File([blob], 'image.png', { type: 'image/png' })
       resolve(file)
     }, 'image/png')
+  })
+}
+
+/**
+ * 将 File 转换为 HTMLImageElement
+ */
+function fileToImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error('无法加载图片文件'))
+    img.src = URL.createObjectURL(file)
   })
 }
