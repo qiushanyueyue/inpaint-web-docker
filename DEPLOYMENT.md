@@ -144,6 +144,37 @@ npm run start
 
 断开网络连接后访问 `http://localhost:3332`，验证所有功能正常工作。
 
+## 维护与更新
+
+### 更新项目
+
+当项目有新版本或修补程序时，按以下步骤更新：
+
+```bash
+# 1. 拉取最新代码
+git pull origin main
+
+# 2. 重新构建镜像 (确保包含最新的代码和依赖)
+# 普通版
+docker-compose build --no-cache
+# GPU 版
+docker-compose -f docker-compose.gpu.yml build --no-cache
+
+# 3. 重启服务
+# 普通版
+docker-compose up -d
+# GPU 版
+docker-compose -f docker-compose.gpu.yml up -d
+```
+
+### 清理空间
+
+如果更新后产生未使用的镜像，可以运行：
+
+```bash
+docker image prune -f
+```
+
 ## 许可证
 
 遵循原项目许可证：GPL-3.0
