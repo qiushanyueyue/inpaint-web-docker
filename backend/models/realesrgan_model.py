@@ -41,18 +41,46 @@ class RealESRGANModel:
     def enhance(self, img, outscale=4):
         """
         执行超分辨率处理
+        
+        Args:
+            img: PIL Image 或 numpy 数组（BGR 格式）
+            outscale: 放大倍数
+            
+        Returns:
+            PIL Image: 放大后的图像
         """
+        import numpy as np
+        from PIL import Image
+        
+        # 如果是 PIL Image，转换为 numpy 数组（BGR 格式）
+        if hasattr(img, 'mode'):  # PIL Image
+            # PIL Image 是 RGB 格式，需要转换为 BGR（OpenCV 格式）
+            img_np = np.array(img)
+            if len(img_np.shape) == 3 and img_np.shape[2] == 3:
+                img_np = img_np[:, :, ::-1]  # RGB -> BGR
+        else:
+            img_np = img
+        
         try:
-            output, _ = self.model.enhance(img, outscale=outscale)
-            return output
+            output, _ = self.model.enhance(img_np, outscale=outscale)
+            
+            # 将输出从 BGR 转换回 RGB，然后转为 PIL Image
+            if len(output.shape) == 3 and output.shape[2] == 3:
+                output = output[:, :, ::-1]  # BGR -> RGB
+            
+            return Image.fromarray(output)
         except RuntimeError as e:
             if "CUDA out of memory" in str(e):
                 # 如果显存不够，尝试使用 tile 模式
                 print("CUDA OOM, trying with tile...")
                 self.model.tile = 512
-                output, _ = self.model.enhance(img, outscale=outscale)
+                output, _ = self.model.enhance(img_np, outscale=outscale)
                 self.model.tile = 0  # 恢复默认
-                return output
+                
+                # 转换回 RGB 和 PIL Image
+                if len(output.shape) == 3 and output.shape[2] == 3:
+                    output = output[:, :, ::-1]
+                return Image.fromarray(output)
             raise e
 
     def get_info(self):
