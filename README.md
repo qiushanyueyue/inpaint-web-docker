@@ -255,7 +255,8 @@ VITE_UPSCALE_MODE=server
 **新增文件**：
 
 - `backend/api_server.py` - FastAPI 主服务
-- `backend/models.py` - Real-ESRGAN 模型封装
+- `backend/models/` - Real-ESRGAN 模型封装包
+
 - `backend/download_models.py` - 模型下载脚本
 - `backend/requirements.txt` - Python 依赖
 

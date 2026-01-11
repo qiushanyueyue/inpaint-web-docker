@@ -153,7 +153,7 @@ VITE_UPSCALE_MODE=server
 
 ### 模型配置
 
-编辑 `backend/models.py` 可调整参数：
+编辑 `backend/models/realesrgan_model.py` 可调整参数：
 
 ```python
 # GTX 1070 8GB 推荐配置
@@ -288,7 +288,8 @@ docker run --rm --gpus all nvidia/cuda:11.8.0-base-ubuntu22.04 nvidia-smi
 **解决**：
 
 ```python
-# 编辑 backend/models.py
+# 编辑 backend/models/realesrgan_model.py
+
 tile=200  # 降低 tile 大小
 fp16=True  # 确保启用 FP16
 ```
@@ -301,7 +302,8 @@ fp16=True  # 确保启用 FP16
 
 ```python
 # 自动降级到 CPU
-# models.py 中已包含错误处理，会自动切换到 CPU
+# backend/models/realesrgan_model.py 中已包含错误处理，会自动切换到 CPU
+
 ```
 
 ### 问题 4：模型文件未找到
@@ -335,7 +337,8 @@ python download_models.py
 **优点**：显存减半，速度提升 20-30%
 
 ```python
-# backend/models.py
+# backend/models/realesrgan_model.py
+
 fp16=True  # 已默认启用
 ```
 
