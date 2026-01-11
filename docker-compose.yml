@@ -5,6 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # 使用浏览器端模式（无需后端 GPU 服务）
+        VITE_UPSCALE_MODE: browser
+        VITE_API_URL: http://localhost:8888
     container_name: inpaint-web
     ports:
       - "3332:3332"

@@ -115,7 +115,7 @@ function App() {
                       >
                         <img
                           className="rounded-md hover:opacity-75 w-auto h-25"
-                          src={`examples/${image}.jpeg`}
+                          src={`/examples/${image}.jpeg`}
                           alt={image}
                           style={{ height: '100px' }}
                         />

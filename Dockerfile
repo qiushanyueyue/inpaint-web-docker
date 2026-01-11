@@ -3,6 +3,14 @@ FROM node:18 as builder
 
 WORKDIR /app
 
+# 定义构建参数
+ARG VITE_API_URL=http://localhost:8888
+ARG VITE_UPSCALE_MODE=browser
+
+# 设置环境变量（Vite 在构建时读取）
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_UPSCALE_MODE=$VITE_UPSCALE_MODE
+
 # 复制 package.json 和 package-lock.json
 COPY package*.json ./
 

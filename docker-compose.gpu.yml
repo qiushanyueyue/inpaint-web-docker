@@ -6,18 +6,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # 设置为 browser 模式，使用浏览器端 ONNX 模型
+        # 避免后端服务依赖问题
+        VITE_UPSCALE_MODE: browser
+        VITE_API_URL: http://localhost:8888
     container_name: inpaint-web-frontend
     ports:
       - "3332:3332"
     restart: unless-stopped
-    environment:
-      - VITE_API_URL=http://localhost:8888
-    depends_on:
-      - backend
     networks:
       - inpaint-network
 
-  # 后端 GPU 服务
+  # 后端 GPU 服务（可选，用于 GPU 加速的超分辨率）
   backend:
     build:
       context: ./backend
