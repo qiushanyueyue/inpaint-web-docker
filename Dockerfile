@@ -37,6 +37,9 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # 从构建阶段复制模型文件
 COPY --from=builder /app/public/models /usr/share/nginx/html/models
 
+# 从构建阶段复制示例图片
+COPY --from=builder /app/public/examples /usr/share/nginx/html/examples
+
 # 暴露端口 3332
 EXPOSE 3332
 

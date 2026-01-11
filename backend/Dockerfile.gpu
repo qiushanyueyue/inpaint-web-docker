@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制代码
 COPY . .
 
-# 下载模型
-RUN python download_models.py
+# 注意：不在构建时下载模型，而是在容器启动时下载
+# 这样可以避免网络问题导致构建失败
+# RUN python download_models.py
 
 # 暴露端口
 EXPOSE 8888
@@ -29,5 +30,5 @@ EXPOSE 8888
 # 设置环境变量
 ENV PYTHONUNBUFFERED=1
 
-# 启动命令
-CMD ["python", "api_server.py"]
+# 启动命令：先检查模型，再启动服务
+CMD python download_models.py && python api_server.py
