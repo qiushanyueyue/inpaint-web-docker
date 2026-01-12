@@ -99,23 +99,36 @@ class MIGANONNXModel:
             # 单输入模型: 将 image 和 mask 沿通道拼接
             # MI-GAN 原始模型期望 [1, 4, 512, 512] 输入 (RGB + mask)
             print(f"   使用单输入模式: 将 image 和 mask 沿通道拼接")
-            # mask_array 形状是 [1, 1, H, W]
-            mask_channel = mask_array.astype(np.float32) / 255.0
-            # 将 mask 反转 (白色=需要修复的区域 -> 1.0)
-            mask_channel = 1.0 - mask_channel
             
-            # 将 image 转为 float 并拼接 mask
+            # 将 image 转为 float [0, 1]
             img_float = img_array.astype(np.float32) / 255.0
+            
+            # mask_array 形状是 [1, 1, H, W]
+            # 注意：mask 中白色(255)=需要修复的区域，转为 1.0
+            # 不反转，直接归一化
+            mask_channel = mask_array.astype(np.float32) / 255.0
+            
+            # 拼接
             combined = np.concatenate([img_float, mask_channel], axis=1)
             print(f"   拼接后形状: {combined.shape}")
+            print(f"   image 范围: [{img_float.min():.2f}, {img_float.max():.2f}]")
+            print(f"   mask 范围: [{mask_channel.min():.2f}, {mask_channel.max():.2f}]")
             
             outputs = self.session.run(
                 None,
                 {input_names[0]: combined}
             )
         
-        # 6. 后处理 (先转为 512x512 图片，再 resize 回原始尺寸)
-        result_image = self._postprocess(outputs[0], MODEL_SIZE, MODEL_SIZE)
+        # 6. 后处理
+        output = outputs[0]
+        print(f"   模型输出形状: {output.shape}, 范围: [{output.min():.3f}, {output.max():.3f}]")
+        
+        # 检查输出是否是 float [0,1] 格式
+        if output.max() <= 1.0:
+            print(f"   输出格式: float [0,1]，乘以 255")
+            output = output * 255.0
+        
+        result_image = self._postprocess(output, MODEL_SIZE, MODEL_SIZE)
         
         # 7. Resize 回原始尺寸
         result_image = result_image.resize((orig_width, orig_height), Image.LANCZOS)
