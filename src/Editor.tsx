@@ -4,7 +4,7 @@ import { DownloadIcon, EyeIcon, ViewBoardsIcon } from '@heroicons/react/outline'
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { useWindowSize } from 'react-use'
 import inpaint from './adapters/inpainting'
-import { serverInpaint } from './adapters/serverInpainting'  // 新增
+import { serverInpaint } from './adapters/serverInpainting' // 新增
 import superResolution from './adapters/superResolution'
 import Button from './components/Button'
 import Slider from './components/Slider'
@@ -61,7 +61,9 @@ export default function Editor(props: EditorProps) {
   const [hideBrushTimeout, setHideBrushTimeout] = useState(0)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isInpaintingLoading, setIsProcessingLoading] = useState(false)
-  const [inpaintMode, setInpaintMode] = useState<'server' | 'browser'>('browser')  // 新增
+  const [inpaintMode, setInpaintMode] = useState<'server' | 'browser'>(
+    'browser'
+  ) // 新增
   const [generateProgress, setGenerateProgress] = useState(0)
   const modalRef = useRef(null)
   const [separator, setSeparator] = useState<HTMLDivElement>()
@@ -81,16 +83,26 @@ export default function Editor(props: EditorProps) {
     async function checkBackendInpaint() {
       try {
         const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+        console.log(
+          '🔍 检测后端 API...',
+          API_BASE_URL ? API_BASE_URL : '(使用相对路径 /api)'
+        )
         const response = await fetch(`${API_BASE_URL}/api/health`)
         const data = await response.json()
+        console.log('📊 后端健康检查响应:', JSON.stringify(data, null, 2))
         if (data.features?.inpaint) {
           setInpaintMode('server')
           console.log('✓ 后端 Inpaint 可用,使用服务器 GPU 模式')
         } else {
-          console.log('⚠️  后端 Inpaint 不可用,使用浏览器模式')
+          console.log(
+            '⚠️  后端 Inpaint 不可用 (features.inpaint =',
+            data.features?.inpaint,
+            '),使用浏览器模式'
+          )
         }
       } catch (error) {
         console.log('⚠️  无法连接后端,使用浏览器模式')
+        console.error('  详细错误:', error)
       }
     }
     checkBackendInpaint()
@@ -215,7 +227,10 @@ export default function Editor(props: EditorProps) {
           try {
             res = await serverInpaint(newFile, maskCanvas.toDataURL())
           } catch (serverError) {
-            console.warn('⚠️  服务器 Inpaint 失败,降级到浏览器模式', serverError)
+            console.warn(
+              '⚠️  服务器 Inpaint 失败,降级到浏览器模式',
+              serverError
+            )
             res = await inpaint(newFile, maskCanvas.toDataURL())
           }
         } else {
