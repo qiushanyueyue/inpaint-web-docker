@@ -63,20 +63,28 @@ class MIGANONNXModel:
         # 获取原始尺寸
         orig_width, orig_height = image.size
         
-        # 1. 预处理图片
-        img_array = self._preprocess_image(image)
+        # 模型需要固定 512x512 输入
+        MODEL_SIZE = 512
         
-        # 2. 预处理遮罩
-        mask_array = self._preprocess_mask(mask, image.size)
+        # 1. Resize 图片和遮罩到 512x512
+        image_resized = image.resize((MODEL_SIZE, MODEL_SIZE), Image.LANCZOS)
+        mask_resized = mask.resize((MODEL_SIZE, MODEL_SIZE), Image.LANCZOS)
+        print(f"   原始尺寸: {orig_width}x{orig_height} -> 缩放到: {MODEL_SIZE}x{MODEL_SIZE}")
         
-        # 3. 检查模型输入格式
+        # 2. 预处理图片
+        img_array = self._preprocess_image(image_resized)
+        
+        # 3. 预处理遮罩
+        mask_array = self._preprocess_mask(mask_resized, (MODEL_SIZE, MODEL_SIZE))
+        
+        # 4. 检查模型输入格式
         input_names = [inp.name for inp in self.session.get_inputs()]
         input_shapes = [inp.shape for inp in self.session.get_inputs()]
         print(f"📊 ONNX 模型输入信息: {len(input_names)} 个输入")
         for i, (name, shape) in enumerate(zip(input_names, input_shapes)):
             print(f"   输入 {i}: name='{name}', shape={shape}")
         
-        # 4. ONNX 推理 - 根据模型输入数量处理
+        # 5. ONNX 推理 - 根据模型输入数量处理
         if len(input_names) >= 2:
             # 双输入模型: 分别传入 image 和 mask
             print(f"   使用双输入模式: {input_names[0]}=image, {input_names[1]}=mask")
@@ -89,9 +97,9 @@ class MIGANONNXModel:
             )
         else:
             # 单输入模型: 将 image 和 mask 沿通道拼接
-            # MI-GAN 原始模型期望 [1, 4, H, W] 输入 (RGB + mask)
+            # MI-GAN 原始模型期望 [1, 4, 512, 512] 输入 (RGB + mask)
             print(f"   使用单输入模式: 将 image 和 mask 沿通道拼接")
-            # mask_array 形状是 [1, 1, H, W]，需要转换
+            # mask_array 形状是 [1, 1, H, W]
             mask_channel = mask_array.astype(np.float32) / 255.0
             # 将 mask 反转 (白色=需要修复的区域 -> 1.0)
             mask_channel = 1.0 - mask_channel
@@ -106,8 +114,12 @@ class MIGANONNXModel:
                 {input_names[0]: combined}
             )
         
-        # 5. 后处理
-        result_image = self._postprocess(outputs[0], orig_width, orig_height)
+        # 6. 后处理 (先转为 512x512 图片，再 resize 回原始尺寸)
+        result_image = self._postprocess(outputs[0], MODEL_SIZE, MODEL_SIZE)
+        
+        # 7. Resize 回原始尺寸
+        result_image = result_image.resize((orig_width, orig_height), Image.LANCZOS)
+        print(f"   输出尺寸: {result_image.size}")
         
         return result_image
     
