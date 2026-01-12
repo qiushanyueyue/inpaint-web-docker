@@ -48,6 +48,10 @@ COPY --from=builder /app/public/models /usr/share/nginx/html/models
 # 从构建阶段复制示例图片
 COPY --from=builder /app/public/examples /usr/share/nginx/html/examples
 
+# 修复文件权限,确保 Nginx 可以读取
+RUN chmod 755 /usr/share/nginx/html/models /usr/share/nginx/html/examples && \
+    chmod 644 /usr/share/nginx/html/models/* /usr/share/nginx/html/examples/*
+
 # 暴露端口 3332
 EXPOSE 3332
 
