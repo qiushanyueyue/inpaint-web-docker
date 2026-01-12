@@ -69,17 +69,44 @@ class MIGANONNXModel:
         # 2. 预处理遮罩
         mask_array = self._preprocess_mask(mask, image.size)
         
-        # 3. ONNX 推理
+        # 3. 检查模型输入格式
         input_names = [inp.name for inp in self.session.get_inputs()]
-        outputs = self.session.run(
-            None,
-            {
-                input_names[0]: img_array,
-                input_names[1]: mask_array
-            }
-        )
+        input_shapes = [inp.shape for inp in self.session.get_inputs()]
+        print(f"📊 ONNX 模型输入信息: {len(input_names)} 个输入")
+        for i, (name, shape) in enumerate(zip(input_names, input_shapes)):
+            print(f"   输入 {i}: name='{name}', shape={shape}")
         
-        # 4. 后处理
+        # 4. ONNX 推理 - 根据模型输入数量处理
+        if len(input_names) >= 2:
+            # 双输入模型: 分别传入 image 和 mask
+            print(f"   使用双输入模式: {input_names[0]}=image, {input_names[1]}=mask")
+            outputs = self.session.run(
+                None,
+                {
+                    input_names[0]: img_array,
+                    input_names[1]: mask_array
+                }
+            )
+        else:
+            # 单输入模型: 将 image 和 mask 沿通道拼接
+            # MI-GAN 原始模型期望 [1, 4, H, W] 输入 (RGB + mask)
+            print(f"   使用单输入模式: 将 image 和 mask 沿通道拼接")
+            # mask_array 形状是 [1, 1, H, W]，需要转换
+            mask_channel = mask_array.astype(np.float32) / 255.0
+            # 将 mask 反转 (白色=需要修复的区域 -> 1.0)
+            mask_channel = 1.0 - mask_channel
+            
+            # 将 image 转为 float 并拼接 mask
+            img_float = img_array.astype(np.float32) / 255.0
+            combined = np.concatenate([img_float, mask_channel], axis=1)
+            print(f"   拼接后形状: {combined.shape}")
+            
+            outputs = self.session.run(
+                None,
+                {input_names[0]: combined}
+            )
+        
+        # 5. 后处理
         result_image = self._postprocess(outputs[0], orig_width, orig_height)
         
         return result_image
