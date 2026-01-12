@@ -31,27 +31,36 @@ def main():
     models = [
         {
             "name": "RealESRGAN_x4plus.pth",
-            "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
+            "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+            "target_dir": "weights"  # 放到 backend/weights/
         },
         {
             "name": "RealESRGAN_x4plus_anime_6B.pth",
-            "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
+            "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
+            "target_dir": "weights"  # 放到 backend/weights/
+        },
+        {
+            "name": "migan_pipeline_v2.onnx",
+            "url": "https://huggingface.co/lxfater/inpaint-web/resolve/main/migan_pipeline_v2.onnx",
+            "target_dir": "../public/models"  # 放到 public/models/ 供前后端共享
         }
     ]
 
-    # Models directory (relative to this script)
-    models_dir = Path(__file__).parent / "weights"
-    models_dir.mkdir(exist_ok=True, parents=True)
-
-    print("=" * 40)
-    print("Downloading Real-ESRGAN models...")
-    print("=" * 40)
+    print("=" * 60)
+    print("下载模型文件...")
+    print("=" * 60)
 
     for model in models:
-        dest_path = models_dir / model["name"]
+        # 确定目标目录(相对于此脚本)
+        target_dir = Path(__file__).parent / model["target_dir"]
+        target_dir.mkdir(exist_ok=True, parents=True)
+        
+        dest_path = target_dir / model["name"]
         download_file(model["url"], dest_path)
 
-    print("\nAll models downloaded successfully!")
+    print("\n" + "=" * 60)
+    print("✓ 所有模型下载完成!")
+    print("=" * 60)
 
 if __name__ == "__main__":
     main()
