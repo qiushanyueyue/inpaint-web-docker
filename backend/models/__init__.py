@@ -36,9 +36,9 @@ def get_inpaint_model(device_type: str = None, model_path: str = None):
     
     # 默认模型路径
     if model_path is None:
-        # 假设模型在项目根目录的 public/models/ 下
+        # 模型在 backend/weights/ 目录下
         current_dir = Path(__file__).parent.parent
-        model_path = current_dir / ".." / "public" / "models" / "migan_pipeline_v2.onnx"
+        model_path = current_dir / "weights" / "migan_pipeline_v2.onnx"
         model_path = str(model_path.resolve())
     
     return MIGANONNXModel(model_path=model_path, device=device_type)
