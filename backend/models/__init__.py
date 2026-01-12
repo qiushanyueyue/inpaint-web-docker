@@ -1,25 +1,16 @@
-from .realesrgan_model import RealESRGANModel
-from .migan_onnx import MIGANONNXModel  # 新增
+from .realesrgan_model import get_model as get_realesrgan_model
+from .migan_onnx import MIGANONNXModel
 from .device import DeviceDetector
 
-__all__ = ['RealESRGANModel', 'MIGANONNXModel', 'DeviceDetector', 'get_model', 'get_inpaint_model']
+__all__ = ['get_realesrgan_model', 'MIGANONNXModel', 'DeviceDetector', 'get_model', 'get_inpaint_model']
 
 
 def get_model(device_type: str = None):
     """
     获取 Real-ESRGAN 超分辨率模型实例
-    
-    Args:
-        device_type: 设备类型 ('cuda', 'mps', 或 'cpu')。如果为 None,自动检测
-    
-    Returns:
-        RealESRGANModel 实例
+    (兼容函数,调用 realesrgan_model 的 get_model)
     """
-    if device_type is None:
-        device_info = DeviceDetector.get_device_info()
-        device_type = device_info['type']
-    
-    return RealESRGANModel(device=device_type)
+    return get_realesrgan_model(device_type)
 
 
 def get_inpaint_model(device_type: str = None, model_path: str = None):
@@ -49,3 +40,4 @@ def get_inpaint_model(device_type: str = None, model_path: str = None):
         model_path = str(model_path.resolve())
     
     return MIGANONNXModel(model_path=model_path, device=device_type)
+
