@@ -40,8 +40,8 @@ def main():
             "target_dir": "weights"  # 放到 backend/weights/
         },
         {
-            "name": "migan.onnx",
-            "url": "https://huggingface.co/lxfater/inpaint-web/resolve/main/migan.onnx",
+            "name": "migan_pipeline_v2.onnx",
+            "url": "https://huggingface.co/niceball/migan_pipeline_v2/resolve/main/migan_pipeline_v2.onnx",
             "target_dir": "weights"  # 放到 backend/weights/ 与其他模型统一
         }
     ]
