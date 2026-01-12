@@ -123,10 +123,11 @@ class MIGANONNXModel:
         output = outputs[0]
         print(f"   模型输出形状: {output.shape}, 范围: [{output.min():.3f}, {output.max():.3f}]")
         
-        # 检查输出是否是 float [0,1] 格式
-        if output.max() <= 1.0:
-            print(f"   输出格式: float [0,1]，乘以 255")
-            output = output * 255.0
+        # 输出是 float 格式，可能包含负值和大于1的值
+        # 先 clip 到 [0, 1]，再乘以 255
+        output = np.clip(output, 0.0, 1.0)
+        output = output * 255.0
+        print(f"   处理后范围: [{output.min():.1f}, {output.max():.1f}]")
         
         result_image = self._postprocess(output, MODEL_SIZE, MODEL_SIZE)
         
