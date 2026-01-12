@@ -4,6 +4,7 @@ import { DownloadIcon, EyeIcon, ViewBoardsIcon } from '@heroicons/react/outline'
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { useWindowSize } from 'react-use'
 import inpaint from './adapters/inpainting'
+import { serverInpaint } from './adapters/serverInpainting'  // 新增
 import superResolution from './adapters/superResolution'
 import Button from './components/Button'
 import Slider from './components/Slider'
@@ -60,6 +61,7 @@ export default function Editor(props: EditorProps) {
   const [hideBrushTimeout, setHideBrushTimeout] = useState(0)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isInpaintingLoading, setIsProcessingLoading] = useState(false)
+  const [inpaintMode, setInpaintMode] = useState<'server' | 'browser'>('browser')  // 新增
   const [generateProgress, setGenerateProgress] = useState(0)
   const modalRef = useRef(null)
   const [separator, setSeparator] = useState<HTMLDivElement>()
@@ -72,7 +74,27 @@ export default function Editor(props: EditorProps) {
   const canvasDiv = useRef<HTMLDivElement>(null)
   const [downloaded, setDownloaded] = useState(true)
   const [downloadProgress, setDownloadProgress] = useState(0)
-  const windowSize = useWindowSize()
+  const { width, height } = useWindowSize()
+
+  // 检测后端 Inpaint 支持
+  useEffect(() => {
+    async function checkBackendInpaint() {
+      try {
+        const API_BASE_URL = import.meta.env.VITE_API_URL || ''
+        const response = await fetch(`${API_BASE_URL}/api/health`)
+        const data = await response.json()
+        if (data.features?.inpaint) {
+          setInpaintMode('server')
+          console.log('✓ 后端 Inpaint 可用,使用服务器 GPU 模式')
+        } else {
+          console.log('⚠️  后端 Inpaint 不可用,使用浏览器模式')
+        }
+      } catch (error) {
+        console.log('⚠️  无法连接后端,使用浏览器模式')
+      }
+    }
+    checkBackendInpaint()
+  }, [])
 
   const draw = useCallback(
     (index = -1) => {
@@ -142,7 +164,7 @@ export default function Editor(props: EditorProps) {
     if (isOriginalLoaded) {
       draw()
     }
-  }, [context?.canvas, draw, original, isOriginalLoaded, windowSize])
+  }, [context?.canvas, draw, original, isOriginalLoaded, width, height])
 
   // Handle mouse interactions
   useEffect(() => {
@@ -181,31 +203,45 @@ export default function Editor(props: EditorProps) {
       canvas.removeEventListener('mouseup', onPointerUp)
       refreshCanvasMask()
       try {
-        const start = Date.now()
-        console.log('inpaint_start')
-        // each time based on the last result, the first is the original
+        console.log(`inpaint_start (${inpaintMode.toUpperCase()})`)
+        setIsProcessingLoading(true)
+
+        let res: string
         const newFile = renders.slice(-1)[0] ?? file
-        const res = await inpaint(newFile, maskCanvas.toDataURL())
-        if (!res) {
-          throw new Error('empty response')
+        const newLine = { pts: [], src: '' } as Line
+
+        if (inpaintMode === 'server') {
+          // 使用服务器 GPU
+          try {
+            res = await serverInpaint(newFile, maskCanvas.toDataURL())
+          } catch (serverError) {
+            console.warn('⚠️  服务器 Inpaint 失败,降级到浏览器模式', serverError)
+            res = await inpaint(newFile, maskCanvas.toDataURL())
+          }
+        } else {
+          // 使用浏览器端
+          res = await inpaint(newFile, maskCanvas.toDataURL())
         }
-        // TODO: fix the render if it failed loading
+
         const newRender = new Image()
         newRender.dataset.id = Date.now().toString()
-        await loadImage(newRender, res)
-        renders.push(newRender)
-        lines.push({ pts: [], src: '' } as Line)
-        setRenders([...renders])
-        setLines([...lines])
-        console.log('inpaint_processed', {
-          duration: Date.now() - start,
+        await new Promise((resolve, reject) => {
+          newRender.onload = resolve
+          newRender.onerror = reject
+          newRender.src = res
         })
-      } catch (e: any) {
+        setRenders([...renders, newRender])
+        setLines([...lines, newLine])
+        console.log(`inpaint_processed (${inpaintMode.toUpperCase()})`, {
+          width: newRender.width,
+          height: newRender.height,
+        })
+      } catch (error: any) {
         console.log('inpaint_failed', {
-          error: e,
+          error,
         })
         // eslint-disable-next-line
-        alert(e.message ? e.message : e.toString())
+        alert(error.message ? error.message : error.toString())
       }
       if (historyListRef.current) {
         const { scrollWidth, clientWidth } = historyListRef.current

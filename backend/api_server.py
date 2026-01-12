@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 import uvicorn
 
-from models import get_model, DeviceDetector
+from models import get_model, get_inpaint_model, DeviceDetector
 
 # 创建 FastAPI 应用
 app = FastAPI(
@@ -31,14 +31,15 @@ app.add_middleware(
 )
 
 # 全局变量
-model = None
+model = None  # RealESRGAN 超分辨率模型
+inpaint_model = None  # MI-GAN Inpaint 模型
 device_info = None
 
 
 @app.on_event("startup")
 async def startup_event():
     """应用启动时初始化"""
-    global model, device_info
+    global model, inpaint_model, device_info
     
     print("=" * 60)
     print("🚀 Inpaint-Web GPU Backend 启动中...")
@@ -62,6 +63,20 @@ async def startup_event():
     except Exception as e:
         print(f"\n❌ 模型加载失败: {e}")
         raise
+    
+    # 加载 Inpaint 模型
+    print(f"\n📦 加载 MI-GAN Inpaint 模型...")
+    try:
+        inpaint_model = get_inpaint_model()
+        print(f"✓ Inpaint 模型加载成功！")
+    except FileNotFoundError as e:
+        print(f"\n⚠️  Inpaint 模型不可用: {e}")
+        print(f"\n  Inpaint 功能将禁用,仅提供 Upscale 功能")
+        inpaint_model = None
+    except Exception as e:
+        print(f"\n⚠️  Inpaint 模型加载失败: {e}")
+        print(f"\n  Inpaint 功能将禁用")
+        inpaint_model = None
     
     print("\n" + "=" * 60)
     print("✓ 服务启动完成，API 文档: http://localhost:8000/docs")
@@ -90,6 +105,10 @@ async def health_check():
     return {
         "status": "healthy",
         "model_loaded": model is not None,
+        "features": {
+            "upscale": model is not None,
+            "inpaint": inpaint_model is not None
+        },
         "device": device_info
     }
 
@@ -220,6 +239,87 @@ async def upscale_with_info(file: UploadFile = File(...)):
             "success": False,
             "error": str(e)
         }, status_code=500)
+
+
+@app.post("/api/inpaint")
+async def inpaint_image(
+    image: UploadFile = File(..., description="原始图片"),
+    mask: UploadFile = File(..., description="遮罩图片,白色=需要修复的区域")
+):
+    """
+    图像 Inpaint(智能消除/修复)
+    
+    Args:
+        image: 原始图片文件
+        mask: 遮罩图片文件(白色部分会被修复)
+    
+    Returns:
+        修复后的图片(PNG 格式)
+    """
+    if inpaint_model is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Inpaint 模型未加载,功能不可用"
+        )
+    
+    # 验证文件类型
+    if not image.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="image 必须是图片文件")
+    if not mask.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="mask 必须是图片文件")
+    
+    try:
+        # 读取图片
+        image_bytes = await image.read()
+        mask_bytes = await mask.read()
+        
+        image_pil = Image.open(io.BytesIO(image_bytes))
+        mask_pil = Image.open(io.BytesIO(mask_bytes))
+        
+        # 转换格式
+        if image_pil.mode != 'RGB':
+            image_pil = image_pil.convert('RGB')
+        if mask_pil.mode != 'L':  # 遮罩转灰度
+            mask_pil = mask_pil.convert('L')
+        
+        original_size = image_pil.size
+        print(f"📥 收到 Inpaint 请求: {original_size[0]}x{original_size[1]}")
+        
+        # 记录开始时间
+        start_time = time.time()
+        
+        # 执行 Inpaint
+        print(f"🔄 开始 Inpaint 处理...")
+        result_image = inpaint_model.inpaint(image_pil, mask_pil)
+        
+        # 计算处理时间
+        process_time = time.time() - start_time
+        print(f"✓ Inpaint 完成 (耗时 {process_time:.2f}秒)")
+        
+        # 转换为字节流
+        output_buffer = io.BytesIO()
+        result_image.save(output_buffer, format='PNG', optimize=True)
+        output_buffer.seek(0)
+        
+        # 返回图片
+        return Response(
+            content=output_buffer.getvalue(),
+            media_type="image/png",
+            headers={
+                "X-Process-Time": f"{process_time:.2f}",
+                "X-Image-Size": f"{original_size[0]}x{original_size[1]}",
+                "X-Device": inpaint_model.actual_device
+            }
+        )
+        
+    except Exception as e:
+        print(f"❌ Inpaint 处理失败: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Inpaint 处理失败: {str(e)}"
+        )
 
 
 if __name__ == "__main__":
