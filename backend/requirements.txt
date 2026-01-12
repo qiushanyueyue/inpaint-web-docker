@@ -1,7 +1,7 @@
 fastapi==0.109.0
 uvicorn[standard]==0.27.0
 python-multipart==0.0.6
-onnxruntime-gpu>=1.16.0  # ONNX Runtime GPU 支持(Inpaint 模型)
+onnxruntime-gpu==1.15.1  # 兼容 CUDA 11.8 (1.16+ 需要 CUDA 12)
 pillow==10.2.0
 numpy==1.26.3
 opencv-python==4.9.0.80
