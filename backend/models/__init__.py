@@ -9,8 +9,10 @@ def get_model(device_type: str = None):
     """
     获取 Real-ESRGAN 超分辨率模型实例
     (兼容函数,调用 realesrgan_model 的 get_model)
+    
+    注意: 原始 get_model() 不接受参数,会自动检测设备
     """
-    return get_realesrgan_model(device_type)
+    return get_realesrgan_model()  # 不传递参数
 
 
 def get_inpaint_model(device_type: str = None, model_path: str = None):
