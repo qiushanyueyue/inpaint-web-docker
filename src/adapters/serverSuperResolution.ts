@@ -3,19 +3,23 @@
  * 调用后端 GPU API 进行图像放大
  */
 
-// 配置：API 基础 URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// 配置:API 基础 URL
+// 空字符串表示使用相对路径 (通过 Nginx 反向代理访问后端)
+// 本地开发时可设置为 http://localhost:8888
+const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 
 /**
  * 检查后端服务是否可用
  */
 export async function checkBackendHealth(): Promise<boolean> {
   try {
+    console.log(`🔍 检查后端健康: ${API_BASE_URL}/api/health`)
     const response = await fetch(`${API_BASE_URL}/api/health`)
     const data = await response.json()
+    console.log('✓ 后端健康检查结果:', data)
     return data.status === 'healthy' && data.model_loaded
   } catch (error) {
-    console.error('后端服务健康检查失败:', error)
+    console.error('❌ 后端服务健康检查失败:', error)
     return false
   }
 }

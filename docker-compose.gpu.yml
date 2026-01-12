@@ -7,8 +7,8 @@ services:
       args:
         # 设置为 server 模式，使用后端 GPU 加速
         VITE_UPSCALE_MODE: server
-        # 使用 NAS 局域网 IP（用户通过浏览器访问后端 API）
-        VITE_API_URL: http://10.254.113.54:8888
+        # 使用相对路径，通过 Nginx 反向代理访问后端
+        VITE_API_URL: ""
     container_name: inpaint-web-frontend
     ports:
       - "3332:3332"
