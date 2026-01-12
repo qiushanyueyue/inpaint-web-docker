@@ -194,7 +194,7 @@ class MIGANONNXModel:
         将 ONNX 输出转换为 PIL Image
         
         Args:
-            output: ONNX 输出 [1, 3, H, W], uint8
+            output: ONNX 输出 [1, 3, H, W], float
             width: 目标宽度
             height: 目标高度
         """
@@ -203,6 +203,9 @@ class MIGANONNXModel:
         
         # 转置回 [H, W, 3]
         img_np = img_np.transpose(1, 2, 0)
+        
+        # 模型输出是 BGR 顺序，转换为 RGB
+        img_np = img_np[:, :, ::-1]  # BGR -> RGB
         
         # 确保是 uint8
         img_np = np.clip(img_np, 0, 255).astype(np.uint8)
