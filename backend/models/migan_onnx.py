@@ -86,19 +86,13 @@ class MIGANONNXModel:
         
         # 5. ONNX 推理 - 根据模型输入数量处理
         if len(input_names) >= 2:
-            # 双输入模型: 分别传入 image 和 mask
-            # 模型期望 float [0, 1] 输入
+            # 双输入模型: 分别传入 image 和 mask (uint8)
             print(f"   使用双输入模式: {input_names[0]}=image, {input_names[1]}=mask")
-            
-            # 转换为 float [0, 1]
-            img_float = img_array.astype(np.float32) / 255.0
-            mask_float = mask_array.astype(np.float32) / 255.0
-            
             outputs = self.session.run(
                 None,
                 {
-                    input_names[0]: img_float,
-                    input_names[1]: mask_float
+                    input_names[0]: img_array,
+                    input_names[1]: mask_array
                 }
             )
         else:
