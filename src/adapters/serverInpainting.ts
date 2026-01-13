@@ -96,11 +96,29 @@ export async function serverInpaint(
 }
 
 /**
- * Data URL 转 Blob
+ * Data URL 转 Blob (改进版本)
+ * 使用 base64 解码而不是 fetch，更可靠
  */
 async function dataURLToBlob(dataURL: string): Promise<Blob> {
-  const res = await fetch(dataURL)
-  return await res.blob()
+  // 分离 data URL 的 header 和 base64 数据
+  const parts = dataURL.split(',')
+  if (parts.length < 2) {
+    throw new Error('Invalid data URL format')
+  }
+
+  const mimeMatch = parts[0].match(/:(.*?);/)
+  const mime = mimeMatch ? mimeMatch[1] : 'image/png'
+  const base64Data = parts[1]
+
+  // 解码 base64
+  const binaryString = atob(base64Data)
+  const bytes = new Uint8Array(binaryString.length)
+
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+
+  return new Blob([bytes], { type: mime })
 }
 
 /**

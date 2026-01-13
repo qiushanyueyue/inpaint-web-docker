@@ -273,8 +273,27 @@ async def inpaint_image(
         image_bytes = await image.read()
         mask_bytes = await mask.read()
         
-        image_pil = Image.open(io.BytesIO(image_bytes))
-        mask_pil = Image.open(io.BytesIO(mask_bytes))
+        print(f"📊 接收到的数据: image={len(image_bytes)} bytes, mask={len(mask_bytes)} bytes")
+        print(f"   Content-Type: image={image.content_type}, mask={mask.content_type}")
+        
+        # 检查数据是否为空
+        if len(image_bytes) == 0:
+            raise HTTPException(status_code=400, detail="image 文件为空")
+        if len(mask_bytes) == 0:
+            raise HTTPException(status_code=400, detail="mask 文件为空")
+        
+        # 尝试打开图片
+        try:
+            image_pil = Image.open(io.BytesIO(image_bytes))
+        except Exception as e:
+            print(f"❌ 无法打开 image: {e}")
+            raise HTTPException(status_code=400, detail=f"无法识别 image 文件格式: {str(e)}")
+        
+        try:
+            mask_pil = Image.open(io.BytesIO(mask_bytes))
+        except Exception as e:
+            print(f"❌ 无法打开 mask: {e}")
+            raise HTTPException(status_code=400, detail=f"无法识别 mask 文件格式: {str(e)}")
         
         # 转换格式
         if image_pil.mode != 'RGB':
