@@ -17,29 +17,19 @@ def get_model(device_type: str = None):
 
 def get_inpaint_model(device_type: str = None, model_path: str = None):
     """
-    获取 MI-GAN Inpaint 模型实例(ONNX Runtime)
+    获取 Inpaint 模型实例
+    
+    当前使用 OpenCV Inpainting (简单快速,无需模型文件)
     
     Args:
-        device_type: 设备类型 ('cuda' 或 'cpu')。如果为 None,自动检测
-        model_path: ONNX 模型文件路径。如果为 None,使用默认路径
+        device_type: 设备类型(OpenCV 仅支持 CPU,此参数仅为接口兼容)
+        model_path: 模型路径(OpenCV 不需要,此参数仅为接口兼容)
     
     Returns:
-        MIGANONNXModel 实例
+        OpenCVInpaint 实例
     """
-    from pathlib import Path
+    from .opencv_inpaint import OpenCVInpaint
     
-    # 自动检测设备
-    if device_type is None:
-        device_info = DeviceDetector.get_device_info()
-        # ONNX Runtime 只支持 CUDA 和 CPU,不支持 MPS
-        device_type = 'cuda' if device_info['type'] == 'cuda' else 'cpu'
-    
-    # 默认模型路径
-    if model_path is None:
-        # 模型在 backend/weights/ 目录下
-        current_dir = Path(__file__).parent.parent
-        model_path = current_dir / "weights" / "migan_pipeline_v2.onnx"
-        model_path = str(model_path.resolve())
-    
-    return MIGANONNXModel(model_path=model_path, device=device_type)
+    # OpenCV inpaint 不需要模型文件,直接返回实例
+    return OpenCVInpaint(device='cpu')
 
