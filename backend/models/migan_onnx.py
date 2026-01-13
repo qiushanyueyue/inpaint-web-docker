@@ -96,27 +96,35 @@ class MIGANONNXModel:
             expected_type = input_types[0]
             print(f"   模型期望的数据类型: {expected_type}")
             
-            # CRITICAL: 尝试反转 mask
+            # DEBUG: 显示原始 mask 信息
+            print(f"   原始 mask 范围: [{mask_array.min()}, {mask_array.max()}]")
+            mask_nonzero = np.count_nonzero(mask_array)
+            mask_total = mask_array.size
+            mask_ratio = mask_nonzero / mask_total * 100
+            print(f"   mask 非零像素: {mask_nonzero}/{mask_total} ({mask_ratio:.1f}%)")
+            
+            # CRITICAL: 暂时不反转 mask,使用原始值测试
             # 某些模型期望: 白色(255)=修复区域
             # 某些模型期望: 黑色(0)=修复区域
-            # 先尝试反转 mask
-            print(f"   原始 mask 范围: [{mask_array.min()}, {mask_array.max()}]")
-            mask_inverted = 255 - mask_array
-            print(f"   反转后 mask 范围: [{mask_inverted.min()}, {mask_inverted.max()}]")
+            # 先尝试原始 mask (不反转)
+            print(f"   🔧 使用原始 mask (不反转)")
+            mask_to_use = mask_array
+            
+            # 如果需要测试反转,取消下面的注释
+            # mask_to_use = 255 - mask_array
+            # print(f"   🔧 使用反转 mask")
             
             # 根据期望类型转换数据
             if 'float' in expected_type.lower():
                 # 模型期望 float32,归一化到 [0, 1]
                 img_input = img_array.astype(np.float32) / 255.0
-                # 使用反转后的 mask
-                mask_input = mask_inverted.astype(np.float32) / 255.0
+                mask_input = mask_to_use.astype(np.float32) / 255.0
                 print(f"   → 转换为 float32: image 范围 [{img_input.min():.3f}, {img_input.max():.3f}]")
                 print(f"   → 转换为 float32: mask 范围 [{mask_input.min():.3f}, {mask_input.max():.3f}]")
             else:
                 # 模型期望 uint8,保持原样
                 img_input = img_array
-                # 使用反转后的 mask
-                mask_input = mask_inverted
+                mask_input = mask_to_use
                 print(f"   → 保持 uint8: image 范围 [{img_input.min()}, {img_input.max()}]")
                 print(f"   → 保持 uint8: mask 范围 [{mask_input.min()}, {mask_input.max()}]")
             
@@ -160,6 +168,16 @@ class MIGANONNXModel:
         print(f"   模型输出范围: [{output.min():.3f}, {output.max():.3f}]")
         print(f"   模型输出均值: {output.mean():.3f}, 标准差: {output.std():.3f}")
         
+        # DEBUG: 保存中间结果用于诊断
+        import os
+        debug_dir = "/tmp/inpaint_debug"
+        os.makedirs(debug_dir, exist_ok=True)
+        
+        # 保存输入图像
+        image.save(f"{debug_dir}/input_image.png")
+        mask.save(f"{debug_dir}/input_mask.png")
+        print(f"   💾 已保存输入: {debug_dir}/input_image.png, input_mask.png")
+        
         # 检查输出范围并相应处理
         if output.max() <= 1.0 and output.min() >= 0.0:
             # 输出已经在 [0, 1] 范围内
@@ -181,6 +199,21 @@ class MIGANONNXModel:
         # 7. Resize 回原始尺寸
         result_image = result_image.resize((orig_width, orig_height), Image.LANCZOS)
         print(f"   输出尺寸: {result_image.size}")
+        
+        # DEBUG: 保存输出图像
+        result_image.save(f"{debug_dir}/output_image.png")
+        print(f"   💾 已保存输出: {debug_dir}/output_image.png")
+        
+        # DEBUG: 计算差异
+        input_array = np.array(image.resize((orig_width, orig_height), Image.LANCZOS))
+        output_array = np.array(result_image)
+        diff = np.abs(input_array.astype(float) - output_array.astype(float))
+        diff_mean = diff.mean()
+        diff_max = diff.max()
+        print(f"   📊 输入输出差异: 均值={diff_mean:.2f}, 最大={diff_max:.2f}")
+        
+        if diff_mean < 1.0:
+            print(f"   ⚠️  警告: 输入输出几乎相同,模型可能没有实际修复!")
         
         return result_image
     
