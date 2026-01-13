@@ -134,9 +134,9 @@ class LamaInpaint:
         print(f"   mask 非零像素: {(mask_array > 0.5).sum()}/{mask_array.size}")
         
         # 推理
+        # CRITICAL: 这个 TorchScript 模型期望参数顺序是 (mask, image)
         with torch.no_grad():
-            # LaMa 模型输入: image 和 mask
-            output = self.model(img_tensor, mask_tensor)
+            output = self.model(mask_tensor, img_tensor)  # 注意顺序: mask 在前!
         
         # 转换回 numpy
         output_np = output.squeeze(0).permute(1, 2, 0).cpu().numpy()
