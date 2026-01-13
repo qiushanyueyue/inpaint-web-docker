@@ -41,8 +41,8 @@ def main():
         },
         {
             "name": "migan_pipeline_v2.onnx",
-            "url": "https://huggingface.co/niceball/migan_pipeline_v2/resolve/main/migan_pipeline_v2.onnx",
-            "target_dir": "weights"  # 放到 backend/weights/ 与其他模型统一
+            "url": "https://huggingface.co/andraniksargsyan/migan/resolve/main/migan_pipeline_v2.onnx",
+            "target_dir": "weights"
         }
     ]
 
