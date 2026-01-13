@@ -223,19 +223,13 @@ export default function Editor(props: EditorProps) {
         const newLine = { pts: [], src: '' } as Line
 
         if (inpaintMode === 'server') {
-          // 使用服务器 GPU
-          try {
-            res = await serverInpaint(newFile, maskCanvas.toDataURL())
-          } catch (serverError) {
-            console.warn(
-              '⚠️  服务器 Inpaint 失败,降级到浏览器模式',
-              serverError
-            )
-            res = await inpaint(newFile, maskCanvas.toDataURL())
-          }
+          // 使用服务器 GPU (不降级到浏览器)
+          res = await serverInpaint(newFile, maskCanvas.toDataURL())
         } else {
-          // 使用浏览器端
-          res = await inpaint(newFile, maskCanvas.toDataURL())
+          // 浏览器模式已禁用,提示用户
+          throw new Error(
+            'Inpaint 功能需要后端服务器支持,请检查后端服务是否正常运行'
+          )
         }
 
         const newRender = new Image()
