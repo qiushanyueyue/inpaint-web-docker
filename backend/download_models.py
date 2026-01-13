@@ -40,9 +40,9 @@ def main():
             "target_dir": "weights"  # 放到 backend/weights/
         },
         {
-            "name": "migan_pipeline_v2.onnx",
-            "url": "https://huggingface.co/andraniksargsyan/migan/resolve/main/migan_pipeline_v2.onnx",
-            "target_dir": "weights"
+            "name": "big-lama.pt",
+            "url": "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt",
+            "target_dir": "weights"  # LaMa inpainting 模型
         }
     ]
 

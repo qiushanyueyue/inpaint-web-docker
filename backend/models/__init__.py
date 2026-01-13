@@ -19,17 +19,30 @@ def get_inpaint_model(device_type: str = None, model_path: str = None):
     """
     获取 Inpaint 模型实例
     
-    当前使用 OpenCV Inpainting (简单快速,无需模型文件)
+    当前使用 LaMa (Resolution-robust Large Mask Inpainting)
+    支持 GPU (CUDA) 和 CPU
     
     Args:
-        device_type: 设备类型(OpenCV 仅支持 CPU,此参数仅为接口兼容)
-        model_path: 模型路径(OpenCV 不需要,此参数仅为接口兼容)
+        device_type: 设备类型 ('cuda' 或 'cpu')。如果为 None,自动检测
+        model_path: 模型路径。如果为 None,使用默认路径
     
     Returns:
-        OpenCVInpaint 实例
+        LamaInpaint 实例
     """
-    from .opencv_inpaint import OpenCVInpaint
+    from .lama_inpaint import LamaInpaint
+    from pathlib import Path
     
-    # OpenCV inpaint 不需要模型文件,直接返回实例
-    return OpenCVInpaint(device='cpu')
+    # 自动检测设备
+    if device_type is None:
+        device_info = DeviceDetector.get_device_info()
+        # LaMa 使用 PyTorch,支持 CUDA 和 CPU
+        device_type = 'cuda' if device_info['type'] == 'cuda' else 'cpu'
+    
+    # 默认模型路径
+    if model_path is None:
+        current_dir = Path(__file__).parent.parent
+        model_path = current_dir / "weights" / "big-lama.pt"
+        model_path = str(model_path.resolve())
+    
+    return LamaInpaint(model_path=model_path, device=device_type)
 
