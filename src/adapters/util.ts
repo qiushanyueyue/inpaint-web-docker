@@ -74,5 +74,6 @@ export const loadingOnnxruntime = async () => {
 }
 
 export async function checkGpu() {
+  // @ts-ignore
   return !navigator?.gpu && !(await navigator.gpu?.requestAdapter())
 }

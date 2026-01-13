@@ -38,12 +38,8 @@ def main():
             "name": "RealESRGAN_x4plus_anime_6B.pth",
             "url": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth",
             "target_dir": "weights"  # 放到 backend/weights/
-        },
-        {
-            "name": "big-lama.pt",
-            "url": "https://github.com/enesmsahin/simple-lama-inpainting/releases/download/v0.1.0/big-lama.pt",
-            "target_dir": "weights"  # LaMa inpainting 模型
         }
+        # LaMa 模型由 simple-lama-inpainting 库自动下载,无需手动下载
     ]
 
     print("=" * 60)
@@ -61,6 +57,7 @@ def main():
     print("\n" + "=" * 60)
     print("✓ 所有模型下载完成!")
     print("=" * 60)
+    print("\n注意: LaMa Inpaint 模型由 simple-lama-inpainting 库自动管理")
 
 if __name__ == "__main__":
     main()

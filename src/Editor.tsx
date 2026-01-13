@@ -3,9 +3,7 @@
 import { DownloadIcon, EyeIcon, ViewBoardsIcon } from '@heroicons/react/outline'
 import { useCallback, useEffect, useState, useRef, useMemo } from 'react'
 import { useWindowSize } from 'react-use'
-import inpaint from './adapters/inpainting'
-import { serverInpaint } from './adapters/serverInpainting' // 新增
-import superResolution from './adapters/superResolution'
+import { serverInpaint } from './adapters/serverInpainting'
 import Button from './components/Button'
 import Slider from './components/Slider'
 import { downloadImage, loadImage, useImage } from './utils'
@@ -357,7 +355,7 @@ export default function Editor(props: EditorProps) {
   }, [separator, context])
 
   function download() {
-    const currRender = renders.at(-1) ?? original
+    const currRender = renders.slice(-1)[0] ?? original
     downloadImage(currRender.currentSrc, 'IMG')
   }
 
@@ -515,7 +513,7 @@ export default function Editor(props: EditorProps) {
       const start = Date.now()
       console.log('superResolution_start (SERVER GPU)')
 
-      const newFile = renders.at(-1) ?? file
+      const newFile = renders.slice(-1)[0] ?? file
       const res = await serverSuperResolution(newFile, setGenerateProgress)
 
       if (!res) {
