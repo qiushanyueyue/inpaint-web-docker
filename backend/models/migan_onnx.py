@@ -96,17 +96,29 @@ class MIGANONNXModel:
             expected_type = input_types[0]
             print(f"   模型期望的数据类型: {expected_type}")
             
+            # CRITICAL: 尝试反转 mask
+            # 某些模型期望: 白色(255)=修复区域
+            # 某些模型期望: 黑色(0)=修复区域
+            # 先尝试反转 mask
+            print(f"   原始 mask 范围: [{mask_array.min()}, {mask_array.max()}]")
+            mask_inverted = 255 - mask_array
+            print(f"   反转后 mask 范围: [{mask_inverted.min()}, {mask_inverted.max()}]")
+            
             # 根据期望类型转换数据
             if 'float' in expected_type.lower():
                 # 模型期望 float32,归一化到 [0, 1]
                 img_input = img_array.astype(np.float32) / 255.0
-                mask_input = mask_array.astype(np.float32) / 255.0
+                # 使用反转后的 mask
+                mask_input = mask_inverted.astype(np.float32) / 255.0
                 print(f"   → 转换为 float32: image 范围 [{img_input.min():.3f}, {img_input.max():.3f}]")
+                print(f"   → 转换为 float32: mask 范围 [{mask_input.min():.3f}, {mask_input.max():.3f}]")
             else:
                 # 模型期望 uint8,保持原样
                 img_input = img_array
-                mask_input = mask_array
+                # 使用反转后的 mask
+                mask_input = mask_inverted
                 print(f"   → 保持 uint8: image 范围 [{img_input.min()}, {img_input.max()}]")
+                print(f"   → 保持 uint8: mask 范围 [{mask_input.min()}, {mask_input.max()}]")
             
             print(f"   image 形状: {img_input.shape}, dtype: {img_input.dtype}")
             print(f"   mask 形状: {mask_input.shape}, dtype: {mask_input.dtype}")
@@ -144,12 +156,24 @@ class MIGANONNXModel:
         
         # 6. 后处理
         output = outputs[0]
-        print(f"   模型输出形状: {output.shape}, 范围: [{output.min():.3f}, {output.max():.3f}]")
+        print(f"   模型输出形状: {output.shape}, dtype: {output.dtype}")
+        print(f"   模型输出范围: [{output.min():.3f}, {output.max():.3f}]")
+        print(f"   模型输出均值: {output.mean():.3f}, 标准差: {output.std():.3f}")
         
-        # 输出是 float 格式，可能包含负值和大于1的值
-        # 先 clip 到 [0, 1]，再乘以 255
-        output = np.clip(output, 0.0, 1.0)
-        output = output * 255.0
+        # 检查输出范围并相应处理
+        if output.max() <= 1.0 and output.min() >= 0.0:
+            # 输出已经在 [0, 1] 范围内
+            print(f"   → 输出在 [0, 1] 范围,直接缩放到 [0, 255]")
+            output = output * 255.0
+        elif output.max() <= 255.0 and output.min() >= 0.0:
+            # 输出已经在 [0, 255] 范围内
+            print(f"   → 输出在 [0, 255] 范围,保持不变")
+            pass
+        else:
+            # 输出范围不标准,需要归一化
+            print(f"   → 输出范围异常,进行归一化处理")
+            output = np.clip(output, 0.0, 1.0) * 255.0
+        
         print(f"   处理后范围: [{output.min():.1f}, {output.max():.1f}]")
         
         result_image = self._postprocess(output, MODEL_SIZE, MODEL_SIZE)
