@@ -80,28 +80,42 @@ class MIGANONNXModel:
         # 4. 检查模型输入格式
         input_names = [inp.name for inp in self.session.get_inputs()]
         input_shapes = [inp.shape for inp in self.session.get_inputs()]
+        input_types = [inp.type for inp in self.session.get_inputs()]
+        
         print(f"📊 ONNX 模型输入信息: {len(input_names)} 个输入")
-        for i, (name, shape) in enumerate(zip(input_names, input_shapes)):
-            print(f"   输入 {i}: name='{name}', shape={shape}")
+        for i, (name, shape, dtype) in enumerate(zip(input_names, input_shapes, input_types)):
+            print(f"   输入 {i}: name='{name}', shape={shape}, type={dtype}")
         
         # 5. ONNX 推理 - 根据模型输入数量处理
         if len(input_names) >= 2:
             # 双输入模型: 分别传入 image 和 mask
-            # NOTE: 模型期望 float32 输入,需要归一化到 [0, 1]
+            # NOTE: 根据模型期望的数据类型自动转换
             print(f"   使用双输入模式: {input_names[0]}=image, {input_names[1]}=mask")
             
-            # 将 uint8 转换为 float32 并归一化
-            img_float = img_array.astype(np.float32) / 255.0
-            mask_float = mask_array.astype(np.float32) / 255.0
+            # 检查第一个输入的期望类型
+            expected_type = input_types[0]
+            print(f"   模型期望的数据类型: {expected_type}")
             
-            print(f"   image 形状: {img_float.shape}, 范围: [{img_float.min():.3f}, {img_float.max():.3f}]")
-            print(f"   mask 形状: {mask_float.shape}, 范围: [{mask_float.min():.3f}, {mask_float.max():.3f}]")
+            # 根据期望类型转换数据
+            if 'float' in expected_type.lower():
+                # 模型期望 float32,归一化到 [0, 1]
+                img_input = img_array.astype(np.float32) / 255.0
+                mask_input = mask_array.astype(np.float32) / 255.0
+                print(f"   → 转换为 float32: image 范围 [{img_input.min():.3f}, {img_input.max():.3f}]")
+            else:
+                # 模型期望 uint8,保持原样
+                img_input = img_array
+                mask_input = mask_array
+                print(f"   → 保持 uint8: image 范围 [{img_input.min()}, {img_input.max()}]")
+            
+            print(f"   image 形状: {img_input.shape}, dtype: {img_input.dtype}")
+            print(f"   mask 形状: {mask_input.shape}, dtype: {mask_input.dtype}")
             
             outputs = self.session.run(
                 None,
                 {
-                    input_names[0]: img_float,
-                    input_names[1]: mask_float
+                    input_names[0]: img_input,
+                    input_names[1]: mask_input
                 }
             )
         else:
