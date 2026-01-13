@@ -282,6 +282,13 @@ async def inpaint_image(
         if mask_pil.mode != 'L':  # 遮罩转灰度
             mask_pil = mask_pil.convert('L')
         
+        # CRITICAL: 确保 mask 和 image 尺寸完全一致
+        # 如果尺寸不同,将 mask 调整为与 image 相同的尺寸
+        if mask_pil.size != image_pil.size:
+            print(f"⚠️  Mask 尺寸 {mask_pil.size} 与 Image 尺寸 {image_pil.size} 不一致,自动调整...")
+            mask_pil = mask_pil.resize(image_pil.size, Image.LANCZOS)
+            print(f"✓ Mask 已调整为 {mask_pil.size}")
+        
         original_size = image_pil.size
         print(f"📥 收到 Inpaint 请求: {original_size[0]}x{original_size[1]}")
         
