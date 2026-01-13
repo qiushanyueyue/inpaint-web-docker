@@ -86,13 +86,22 @@ class MIGANONNXModel:
         
         # 5. ONNX 推理 - 根据模型输入数量处理
         if len(input_names) >= 2:
-            # 双输入模型: 分别传入 image 和 mask (uint8)
+            # 双输入模型: 分别传入 image 和 mask
+            # NOTE: 模型期望 float32 输入,需要归一化到 [0, 1]
             print(f"   使用双输入模式: {input_names[0]}=image, {input_names[1]}=mask")
+            
+            # 将 uint8 转换为 float32 并归一化
+            img_float = img_array.astype(np.float32) / 255.0
+            mask_float = mask_array.astype(np.float32) / 255.0
+            
+            print(f"   image 形状: {img_float.shape}, 范围: [{img_float.min():.3f}, {img_float.max():.3f}]")
+            print(f"   mask 形状: {mask_float.shape}, 范围: [{mask_float.min():.3f}, {mask_float.max():.3f}]")
+            
             outputs = self.session.run(
                 None,
                 {
-                    input_names[0]: img_array,
-                    input_names[1]: mask_array
+                    input_names[0]: img_float,
+                    input_names[1]: mask_float
                 }
             )
         else:
@@ -140,7 +149,8 @@ class MIGANONNXModel:
     def _preprocess_image(self, image: Image.Image) -> np.ndarray:
         """
         预处理图片
-        转换为 ONNX 模型需要的格式: [1, 3, H, W], uint8
+        转换为 numpy 数组: [1, 3, H, W], uint8
+        (在推理前会转换为 float32 并归一化)
         """
         # 确保是 RGB
         if image.mode != 'RGB':
@@ -164,7 +174,8 @@ class MIGANONNXModel:
     ) -> np.ndarray:
         """
         预处理遮罩
-        转换为 ONNX 模型需要的格式: [1, 1, H, W], uint8
+        转换为 numpy 数组: [1, 1, H, W], uint8
+        (在推理前会转换为 float32 并归一化)
         """
         # 调整大小到与图片相同
         if mask.size != target_size:
