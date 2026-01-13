@@ -103,16 +103,13 @@ class MIGANONNXModel:
             mask_ratio = mask_nonzero / mask_total * 100
             print(f"   mask 非零像素: {mask_nonzero}/{mask_total} ({mask_ratio:.1f}%)")
             
-            # CRITICAL: 暂时不反转 mask,使用原始值测试
-            # 某些模型期望: 白色(255)=修复区域
-            # 某些模型期望: 黑色(0)=修复区域
-            # 先尝试原始 mask (不反转)
-            print(f"   🔧 使用原始 mask (不反转)")
-            mask_to_use = mask_array
-            
-            # 如果需要测试反转,取消下面的注释
-            # mask_to_use = 255 - mask_array
-            # print(f"   🔧 使用反转 mask")
+            # CRITICAL: 反转 mask
+            # 前端: 白色(255)=用户标记的修复区域
+            # 模型: 黑色(0)=需要修复的区域
+            # 因此需要反转: 255 -> 0, 0 -> 255
+            print(f"   🔧 反转 mask (白色->黑色)")
+            mask_to_use = 255 - mask_array
+            print(f"   反转后 mask 范围: [{mask_to_use.min()}, {mask_to_use.max()}]")
             
             # 根据期望类型转换数据
             if 'float' in expected_type.lower():
