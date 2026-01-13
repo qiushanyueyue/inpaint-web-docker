@@ -58,9 +58,7 @@ export default function Editor(props: EditorProps) {
   const [hideBrushTimeout, setHideBrushTimeout] = useState(0)
   const [showOriginal, setShowOriginal] = useState(false)
   const [isInpaintingLoading, setIsProcessingLoading] = useState(false)
-  const [inpaintMode, setInpaintMode] = useState<'server' | 'browser'>(
-    'browser'
-  ) // 新增
+  const [inpaintMode, setInpaintMode] = useState<'server' | 'browser'>('server') // 默认使用 server 模式，不再默认为 browser
   const [generateProgress, setGenerateProgress] = useState(0)
   const modalRef = useRef(null)
   const [separator, setSeparator] = useState<HTMLDivElement>()
@@ -217,15 +215,14 @@ export default function Editor(props: EditorProps) {
         const newFile = renders.slice(-1)[0] ?? file
         const newLine = { pts: [], src: '' } as Line
 
-        if (inpaintMode === 'server') {
-          // 使用服务器 GPU (不降级到浏览器)
-          res = await serverInpaint(newFile, maskCanvas.toDataURL())
-        } else {
-          // 浏览器模式已禁用,提示用户
-          throw new Error(
-            'Inpaint 功能需要后端服务器支持,请检查后端服务是否正常运行'
-          )
-        }
+        // 直接调用服务器 GPU，不再检查 inpaintMode 状态
+        // if (inpaintMode === 'server') {
+        res = await serverInpaint(newFile, maskCanvas.toDataURL())
+        // } else {
+        //   throw new Error(
+        //     'Inpaint 功能需要后端服务器支持,请检查后端服务是否正常运行'
+        //   )
+        // }
 
         const newRender = new Image()
         newRender.dataset.id = Date.now().toString()
@@ -254,7 +251,7 @@ export default function Editor(props: EditorProps) {
         }
       }
       loading.close()
-      draw()
+      // draw() // 移除此处的 draw() 调用，避免使用旧状态重绘导致红色画笔残留。依赖 useEffect 根据新状态自动重绘。
     }
     canvas.addEventListener('mousemove', onMouseMove)
 
