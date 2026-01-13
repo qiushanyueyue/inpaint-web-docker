@@ -10,7 +10,6 @@ import Button from './components/Button'
 import Slider from './components/Slider'
 import { downloadImage, loadImage, useImage } from './utils'
 import Progress from './components/Progress'
-import { modelExists, downloadModel } from './adapters/cache'
 import Modal from './components/Modal'
 import * as m from './paraglide/messages'
 
@@ -74,8 +73,6 @@ export default function Editor(props: EditorProps) {
   const isBrushSizeChange = useRef<boolean>(false)
   const scaledBrushSize = useMemo(() => brushSize, [brushSize])
   const canvasDiv = useRef<HTMLDivElement>(null)
-  const [downloaded, setDownloaded] = useState(true)
-  const [downloadProgress, setDownloadProgress] = useState(0)
   const { width, height } = useWindowSize()
 
   // 检测后端 Inpaint 支持
@@ -500,67 +497,31 @@ export default function Editor(props: EditorProps) {
   }, [])
 
   const onSuperResolution = useCallback(async () => {
-    // 检查是否启用服务器端模式
-    const useServerBackend = import.meta.env.VITE_UPSCALE_MODE === 'server'
-
-    if (useServerBackend) {
-      // 使用服务器端 GPU 加速
-      try {
-        const { serverSuperResolution, checkBackendHealth } = await import(
-          './adapters/serverSuperResolution'
-        )
-
-        // 检查后端可用性
-        const isHealthy = await checkBackendHealth()
-        if (!isHealthy) {
-          throw new Error('后端服务不可用，切换到浏览器端模式')
-        }
-
-        setIsProcessingLoading(true)
-        const start = Date.now()
-        console.log('superResolution_start (SERVER GPU)')
-
-        const newFile = renders.at(-1) ?? file
-        const res = await serverSuperResolution(newFile, setGenerateProgress)
-
-        if (!res) {
-          throw new Error('empty response')
-        }
-
-        const newRender = new Image()
-        newRender.dataset.id = Date.now().toString()
-        await loadImage(newRender, res)
-        renders.push(newRender)
-        lines.push({ pts: [], src: '' } as Line)
-        setRenders([...renders])
-        setLines([...lines])
-
-        console.log('superResolution_processed (SERVER GPU)', {
-          duration: Date.now() - start,
-        })
-        setIsProcessingLoading(false)
-        return
-      } catch (error) {
-        console.warn('服务器端处理失败，降级到浏览器端:', error)
-        // 继续使用浏览器端模式
-      }
-    }
-
-    // 浏览器端模式（原有逻辑）
-    if (!(await modelExists('superResolution'))) {
-      setDownloaded(false)
-      await downloadModel('superResolution', setDownloadProgress)
-      setDownloaded(true)
-    }
-    setIsProcessingLoading(true)
+    // 仅使用服务器端 GPU 加速模式
     try {
+      const { serverSuperResolution, checkBackendHealth } = await import(
+        './adapters/serverSuperResolution'
+      )
+
+      // 检查后端可用性
+      const isHealthy = await checkBackendHealth()
+      if (!isHealthy) {
+        throw new Error(
+          'Upscale 功能需要后端服务器支持,请检查后端服务是否正常运行'
+        )
+      }
+
+      setIsProcessingLoading(true)
       const start = Date.now()
-      console.log('superResolution_start (BROWSER)')
+      console.log('superResolution_start (SERVER GPU)')
+
       const newFile = renders.at(-1) ?? file
-      const res = await superResolution(newFile, setGenerateProgress)
+      const res = await serverSuperResolution(newFile, setGenerateProgress)
+
       if (!res) {
         throw new Error('empty response')
       }
+
       const newRender = new Image()
       newRender.dataset.id = Date.now().toString()
       await loadImage(newRender, res)
@@ -568,15 +529,17 @@ export default function Editor(props: EditorProps) {
       lines.push({ pts: [], src: '' } as Line)
       setRenders([...renders])
       setLines([...lines])
-      console.log('superResolution_processed (BROWSER)', {
+
+      console.log('superResolution_processed (SERVER GPU)', {
         duration: Date.now() - start,
       })
-    } catch (error) {
-      console.error('superResolution', error)
+    } catch (error: any) {
+      console.error('superResolution_failed', error)
+      alert(error.message ? error.message : error.toString())
     } finally {
       setIsProcessingLoading(false)
     }
-  }, [file, lines, original.naturalHeight, original.naturalWidth, renders])
+  }, [file, lines, renders])
 
   return (
     <div
@@ -708,14 +671,6 @@ export default function Editor(props: EditorProps) {
         </div>
       </div>
 
-      {!downloaded && (
-        <Modal>
-          <div className="text-xl space-y-5">
-            <p>{m.upscaleing_model_download_message()}</p>
-            <Progress percent={downloadProgress} />
-          </div>
-        </Modal>
-      )}
       {showBrush && (
         <div
           className="fixed rounded-full bg-red-500 bg-opacity-50 pointer-events-none left-0 top-0"

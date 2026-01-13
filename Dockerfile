@@ -24,9 +24,6 @@ RUN npm install
 # 复制源代码和其他必要文件
 COPY . .
 
-# 下载模型文件
-RUN chmod +x download-models.sh && ./download-models.sh
-
 # 临时移除 ESLint 插件以避免构建失败
 RUN sed -i 's/plugins: \[react(), eslintPlugin()\]/plugins: [react()]/' vite.config.ts
 
@@ -42,15 +39,12 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # 从构建阶段复制构建产物
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# 从构建阶段复制模型文件
-COPY --from=builder /app/public/models /usr/share/nginx/html/models
-
 # 从构建阶段复制示例图片
 COPY --from=builder /app/public/examples /usr/share/nginx/html/examples
 
 # 修复文件权限,确保 Nginx 可以读取
-RUN chmod 755 /usr/share/nginx/html/models /usr/share/nginx/html/examples && \
-    chmod 644 /usr/share/nginx/html/models/* /usr/share/nginx/html/examples/*
+RUN chmod 755 /usr/share/nginx/html/examples && \
+    chmod 644 /usr/share/nginx/html/examples/*
 
 # 暴露端口 3332
 EXPOSE 3332

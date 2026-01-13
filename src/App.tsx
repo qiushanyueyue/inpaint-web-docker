@@ -8,8 +8,6 @@ import FileSelect from './components/FileSelect'
 import Modal from './components/Modal'
 import Editor from './Editor'
 import { resizeImageFile } from './utils'
-import Progress from './components/Progress'
-import { downloadModel } from './adapters/cache'
 import * as m from './paraglide/messages'
 import {
   languageTag,
@@ -25,12 +23,6 @@ function App() {
 
   const [showAbout, setShowAbout] = useState(false)
   const modalRef = useRef(null)
-
-  const [downloadProgress, setDownloadProgress] = useState(100)
-
-  useEffect(() => {
-    downloadModel('inpaint', setDownloadProgress)
-  }, [])
 
   useClickAway(modalRef, () => {
     setShowAbout(false)
@@ -158,14 +150,6 @@ function App() {
               </a>{' '}
               to provide feedback.
             </p>
-          </div>
-        </Modal>
-      )}
-      {!(downloadProgress === 100) && (
-        <Modal>
-          <div className="text-xl space-y-5">
-            <p>{m.inpaint_model_download_message()}</p>
-            <Progress percent={downloadProgress} />
           </div>
         </Modal>
       )}
