@@ -4,6 +4,29 @@
 
 ---
 
+## [1.0.4] - 2026-01-14
+
+### 🐛 Bug 修复
+
+#### 彻底修复图片格式识别问题
+
+**根本原因**：当进行多次消除操作时，`newFile` 变成 `HTMLImageElement`（之前处理的结果），其 `src` 是 data URL。使用 `canvas.toBlob` 转换时可能产生无效数据。
+
+**修复方案** (`src/adapters/serverInpainting.ts`):
+
+- 检测 HTMLImageElement 的 src 类型
+- **data URL**: 直接使用 `dataURLToBlob` 转换，绕过 canvas
+- **blob URL**: 使用 `fetch` 获取原始数据
+- **其他 URL**: 使用 canvas 转换（作为后备方案）
+- 添加 Blob 有效性验证（大小不能为 0）
+- 添加详细的调试日志
+
+### 📝 文件修改
+
+- `src/adapters/serverInpainting.ts` - 优化 HTMLImageElement 到 Blob 的转换逻辑
+
+---
+
 ## [1.0.3] - 2026-01-14
 
 ### 🐛 Bug 修复

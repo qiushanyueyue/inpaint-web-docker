@@ -90,11 +90,48 @@ export async function serverInpaint(
     // 处理不同类型的输入
     let imageBlob: Blob
     if (imageFile instanceof HTMLImageElement) {
-      console.log('  转换 HTMLImageElement 为 Blob...')
-      imageBlob = await imageToBlob(imageFile)
+      console.log('  处理 HTMLImageElement...')
+      console.log(`    src 类型: ${imageFile.src.substring(0, 50)}...`)
+
+      // 检查 src 是否是 data URL，如果是，直接转换为 Blob（更可靠）
+      if (imageFile.src.startsWith('data:')) {
+        console.log('    src 是 data URL，直接转换为 Blob...')
+        try {
+          imageBlob = await dataURLToBlob(imageFile.src)
+          console.log(`    data URL 转换成功: ${imageBlob.size} bytes`)
+        } catch (e) {
+          console.warn('    data URL 转换失败，尝试 canvas 方式...')
+          imageBlob = await imageToBlob(imageFile)
+        }
+      } else if (imageFile.src.startsWith('blob:')) {
+        // blob URL，需要先 fetch 获取数据
+        console.log('    src 是 blob URL，尝试 fetch...')
+        try {
+          const response = await fetch(imageFile.src)
+          imageBlob = await response.blob()
+          console.log(`    blob URL fetch 成功: ${imageBlob.size} bytes`)
+        } catch (e) {
+          console.warn('    blob URL fetch 失败，尝试 canvas 方式...')
+          imageBlob = await imageToBlob(imageFile)
+        }
+      } else {
+        // 其他 URL（http/https），使用 canvas 方式
+        console.log('    使用 canvas 转换...')
+        imageBlob = await imageToBlob(imageFile)
+      }
     } else {
+      // File 对象直接使用
       imageBlob = imageFile
+      console.log(`  File 对象: ${imageBlob.size} bytes`)
     }
+
+    // 验证 imageBlob 是否有效
+    if (!imageBlob || imageBlob.size === 0) {
+      throw new Error('图片数据无效（大小为 0）')
+    }
+    console.log(
+      `  最终图片 Blob: ${imageBlob.size} bytes, type: ${imageBlob.type}`
+    )
 
     // 将 mask dataURL 转换为 Blob
     const maskBlob = await dataURLToBlob(maskDataUrl)
