@@ -133,12 +133,30 @@ export async function serverInpaint(
       `  最终图片 Blob: ${imageBlob.size} bytes, type: ${imageBlob.type}`
     )
 
+    // 如果图片不是 PNG 格式，需要转换为 PNG 以确保后端兼容性
+    // 某些 JPEG 文件可能有特殊编码导致 PIL 无法识别
+    let finalImageBlob: Blob = imageBlob
+    if (imageBlob.type !== 'image/png') {
+      console.log('  图片非 PNG 格式，进行格式转换...')
+      try {
+        finalImageBlob = await convertToPng(imageBlob)
+        console.log(
+          `  转换后 Blob: ${finalImageBlob.size} bytes, type: ${finalImageBlob.type}`
+        )
+      } catch (e) {
+        console.warn('  PNG 转换失败，使用原始数据:', e)
+        finalImageBlob = imageBlob
+      }
+    }
+
     // 将 mask dataURL 转换为 Blob
     const maskBlob = await dataURLToBlob(maskDataUrl)
 
     // 构建 FormData
+    // 根据实际类型设置正确的文件扩展名
+    const imageExt = finalImageBlob.type === 'image/png' ? 'png' : 'jpg'
     const formData = new FormData()
-    formData.append('image', imageBlob, 'image.png')
+    formData.append('image', finalImageBlob, `image.${imageExt}`)
     formData.append('mask', maskBlob, 'mask.png')
 
     // 调用后端 API
@@ -170,6 +188,48 @@ export async function serverInpaint(
     console.error('❌ 服务器 Inpaint 失败:', error)
     throw error
   }
+}
+
+/**
+ * 将 Blob 转换为 PNG 格式
+ * 通过 Image + Canvas 重新编码图片，确保格式兼容性
+ */
+async function convertToPng(blob: Blob): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(blob)
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || img.width
+      canvas.height = img.naturalHeight || img.height
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('无法获取 Canvas 上下文'))
+        return
+      }
+
+      ctx.drawImage(img, 0, 0)
+
+      canvas.toBlob(pngBlob => {
+        if (pngBlob && pngBlob.size > 0) {
+          resolve(pngBlob)
+        } else {
+          reject(new Error('PNG 转换失败'))
+        }
+      }, 'image/png')
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('无法加载图片进行格式转换'))
+    }
+
+    img.src = url
+  })
 }
 
 /**
