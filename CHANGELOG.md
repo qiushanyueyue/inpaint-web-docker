@@ -4,6 +4,34 @@
 
 ---
 
+## [1.0.3] - 2026-01-14
+
+### 🐛 Bug 修复
+
+#### 进一步修复图片格式识别问题
+
+**问题**：个别图片消除仍报错 "无法识别 image 文件格式"
+
+**前端修复** (`src/adapters/serverInpainting.ts`):
+
+- 增强 `imageToBlob` 函数，添加图片尺寸验证
+- PNG 转换失败时自动降级为 JPEG 格式
+- 添加跨域图片检测和警告日志
+- 输出详细的 Blob 信息用于调试
+
+**后端修复** (`backend/api_server.py`):
+
+- 添加 OpenCV 作为备用图片解析器
+- PIL 和强制解析都失败时，使用 `cv2.imdecode` 尝试解析
+- 添加原始数据头部打印，便于调试未知格式
+
+### 📝 文件修改
+
+- `src/adapters/serverInpainting.ts` - 增强图片转换逻辑
+- `backend/api_server.py` - 添加 OpenCV 备用解析
+
+---
+
 ## [1.0.2] - 2026-01-14
 
 ### 🐛 Bug 修复

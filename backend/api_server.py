@@ -294,7 +294,7 @@ async def inpaint_image(
             # 验证图片是否有效
             image_pil.load()
         except Exception as e:
-            print(f"❌ 无法打开 image: {e}")
+            print(f"❌ PIL 无法打开 image: {e}")
             # 尝试强制转换
             try:
                 print(f"   尝试强制解析图片...")
@@ -306,8 +306,26 @@ async def inpaint_image(
                 image_pil = image_pil.convert('RGB')
                 print(f"   强制解析成功")
             except Exception as e2:
-                print(f"❌ 强制解析也失败: {e2}")
-                raise HTTPException(status_code=400, detail=f"无法识别 image 文件格式，请尝试转换为 PNG 或 JPG 格式后重试。原始错误: {str(e)}")
+                print(f"❌ 强制解析失败: {e2}")
+                # 尝试使用 OpenCV 作为备用
+                try:
+                    print(f"   尝试使用 OpenCV 解析...")
+                    import cv2
+                    import numpy as np
+                    nparr = np.frombuffer(image_bytes, np.uint8)
+                    img_cv = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+                    if img_cv is not None:
+                        # OpenCV 读取的是 BGR，转换为 RGB
+                        img_rgb = cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB)
+                        image_pil = Image.fromarray(img_rgb)
+                        print(f"   OpenCV 解析成功: {image_pil.size}")
+                    else:
+                        raise Exception("OpenCV 解码返回 None")
+                except Exception as e3:
+                    print(f"❌ OpenCV 解析也失败: {e3}")
+                    # 打印原始数据的前几个字节用于调试
+                    print(f"   数据头部: {image_bytes[:20].hex() if len(image_bytes) > 20 else image_bytes.hex()}")
+                    raise HTTPException(status_code=400, detail=f"无法识别 image 文件格式，请尝试转换为 PNG 或 JPG 格式后重试。原始错误: {str(e)}")
         
         try:
             mask_pil = Image.open(io.BytesIO(mask_bytes))

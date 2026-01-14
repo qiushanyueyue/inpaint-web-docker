@@ -8,28 +8,68 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || ''
 /**
  * HTMLImageElement 转 Blob
  * 将图片元素绘制到 canvas 并转换为 Blob
+ * 增强版本：支持跨域图片和错误处理
  */
 async function imageToBlob(img: HTMLImageElement): Promise<Blob> {
   return new Promise((resolve, reject) => {
-    const canvas = document.createElement('canvas')
-    canvas.width = img.naturalWidth || img.width
-    canvas.height = img.naturalHeight || img.height
+    try {
+      const canvas = document.createElement('canvas')
+      const width = img.naturalWidth || img.width
+      const height = img.naturalHeight || img.height
 
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      reject(new Error('无法获取 Canvas 上下文'))
-      return
-    }
-
-    ctx.drawImage(img, 0, 0)
-
-    canvas.toBlob(blob => {
-      if (blob) {
-        resolve(blob)
-      } else {
-        reject(new Error('Canvas 转 Blob 失败'))
+      // 验证图片尺寸
+      if (width === 0 || height === 0) {
+        reject(new Error('图片尺寸无效（宽度或高度为0）'))
+        return
       }
-    }, 'image/png')
+
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        reject(new Error('无法获取 Canvas 上下文'))
+        return
+      }
+
+      // 绘制图片到 canvas
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // 验证 canvas 是否有有效数据
+      try {
+        // 尝试读取像素数据，检测跨域问题
+        ctx.getImageData(0, 0, 1, 1)
+      } catch (e) {
+        console.warn('⚠️ Canvas 可能受跨域限制，尝试继续处理...')
+      }
+
+      // 尝试转换为 PNG，如果失败则尝试 JPEG
+      canvas.toBlob(blob => {
+        if (blob && blob.size > 0) {
+          console.log(
+            `   Canvas 转 Blob 成功: ${blob.size} bytes, type: ${blob.type}`
+          )
+          resolve(blob)
+        } else {
+          // PNG 失败，尝试 JPEG
+          console.warn('   PNG 转换失败，尝试 JPEG...')
+          canvas.toBlob(
+            jpegBlob => {
+              if (jpegBlob && jpegBlob.size > 0) {
+                console.log(`   JPEG 转换成功: ${jpegBlob.size} bytes`)
+                resolve(jpegBlob)
+              } else {
+                reject(new Error('Canvas 转 Blob 失败：输出为空'))
+              }
+            },
+            'image/jpeg',
+            0.95
+          )
+        }
+      }, 'image/png')
+    } catch (error) {
+      reject(new Error(`图片转换失败: ${error}`))
+    }
   })
 }
 
