@@ -9,8 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 import io
 import time
+import gc
 from pathlib import Path
 import uvicorn
+import torch
 
 from models import get_model, get_inpaint_model, DeviceDetector
 
@@ -191,6 +193,10 @@ async def upscale_image(
     
     except Exception as e:
         print(f"❌ 处理失败: {e}")
+        # 清理 CUDA 缓存
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            gc.collect()
         raise HTTPException(status_code=500, detail=f"处理失败: {str(e)}")
 
 
@@ -285,12 +291,27 @@ async def inpaint_image(
         # 尝试打开图片
         try:
             image_pil = Image.open(io.BytesIO(image_bytes))
+            # 验证图片是否有效
+            image_pil.load()
         except Exception as e:
             print(f"❌ 无法打开 image: {e}")
-            raise HTTPException(status_code=400, detail=f"无法识别 image 文件格式: {str(e)}")
+            # 尝试强制转换
+            try:
+                print(f"   尝试强制解析图片...")
+                from io import BytesIO
+                img_data = BytesIO(image_bytes)
+                img_data.seek(0)
+                image_pil = Image.open(img_data)
+                # 强制加载并转换为 RGB
+                image_pil = image_pil.convert('RGB')
+                print(f"   强制解析成功")
+            except Exception as e2:
+                print(f"❌ 强制解析也失败: {e2}")
+                raise HTTPException(status_code=400, detail=f"无法识别 image 文件格式，请尝试转换为 PNG 或 JPG 格式后重试。原始错误: {str(e)}")
         
         try:
             mask_pil = Image.open(io.BytesIO(mask_bytes))
+            mask_pil.load()
         except Exception as e:
             print(f"❌ 无法打开 mask: {e}")
             raise HTTPException(status_code=400, detail=f"无法识别 mask 文件格式: {str(e)}")
@@ -338,10 +359,16 @@ async def inpaint_image(
             }
         )
         
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"❌ Inpaint 处理失败: {e}")
         import traceback
         traceback.print_exc()
+        # 清理 CUDA 缓存
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            gc.collect()
         raise HTTPException(
             status_code=500, 
             detail=f"Inpaint 处理失败: {str(e)}"
